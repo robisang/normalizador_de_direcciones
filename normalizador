@@ -1,0 +1,57 @@
+from urllib.request import urlopen
+from  urllib.parse import quote
+import csv
+import json
+import pandas as pd
+
+#Armo la funcion para normalizar las direcciones
+
+def normalizar(direccion, localidad):
+    
+    citar = quote(direccion+","+localidad)
+    pagina = urlopen("http://servicios.usig.buenosaires.gob.ar/normalizar/?geocodificar=True&direccion="+citar)
+    json_str = pagina.read().decode("utf8")    
+    return json.loads(json_str)
+
+#Extraigo la informacion del csv 
+
+file = open("E:\Avellaneda.csv", "r", encoding="latin1")
+lectura = csv.reader(file, delimiter = ";")
+titulos_old = next(lectura)
+
+#Convierto cada columna en una lista
+
+tipo =[]
+local = []
+lista_direcc = []
+
+for i in lectura:
+    tipo.append(i[0])
+    local.append(i[1])
+    lista_direcc.append(i[2])
+
+#Normalizo la direccion y extraigo las coordenadas
+
+localidad = "caba"
+lista_x = []
+lista_y = []
+for i in lista_direcc:
+    direccion = i
+    datos = normalizar(direccion, localidad)
+    if "coordenadas" in datos["direccionesNormalizadas"][0]:
+        coordenadas = datos["direccionesNormalizadas"][0].get("coordenadas")
+        x = datos["direccionesNormalizadas"][0].get("coordenadas").get("x")
+        y = datos["direccionesNormalizadas"][0].get("coordenadas").get("y")
+        lista_x.append(x)
+        lista_y.append(y)
+        
+#Armo el archivo nuevo con un df
+        
+locales = pd.DataFrame()
+locales["Tipo"] = tipo
+locales["Nombre"] = local
+locales["Direccion"] = lista_direcc
+locales["X"] = lista_x
+locales["Y"] = lista_y
+
+locales.to_excel(r"E:\archivo.xlsx", index = "F")
